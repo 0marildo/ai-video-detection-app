@@ -1,0 +1,26 @@
+{
+  "name": "ai-detection",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+"scripts": {
+  "test": "playwright test"
+},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/0marildo/AI-Video-Detection-APP.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/0marildo/AI-Video-Detection-APP/issues"
+  },
+  "homepage": "https://github.com/0marildo/AI-Video-Detection-APP#readme",
+  "devDependencies": {
+    "@playwright/test": "^1.58.2",
+    "@types/node": "^25.3.5",
+    "typescript": "^5.9.3"
+  }
+}

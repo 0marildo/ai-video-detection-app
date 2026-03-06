@@ -1,43 +1,58 @@
 import asyncio
-import random
+import httpx
 from decouple import config
+from services.storage import upload_video, delete_video, s3, R2_BUCKET_NAME
 
-API_KEY = config("TRUTH_SCAN_API_KEY", default = None)
-MOCK_MODE = API_KEY is None
+SIGHTENGINE_API_USER = config("SIGHTENGINE_API_USER", default=None)
+SIGHTENGINE_API_SECRET = config("SIGHTENGINE_API_SECRET", default=None)
+MOCK_MODE = not SIGHTENGINE_API_USER or not SIGHTENGINE_API_SECRET
 
-async def submit_video(file_bytes: bytes, filename: str) -> str:
-    if MOCK_MODE:
-        return f"mock-id-{random.randint(10000, 99999)}"
-
-    import httpx
-    async with httpx.AsyncClient() as client:
-        response = await client.post(
-        "https://detect-video.truthscan.com/detect-file",
-        headers={"key": API_KEY},
-        files={"file": (filename, file_bytes, "video/mp4")}
-        )
-        response.raise_for_status()
-        return response.json()["id"]
-
-async def query_response(job_id: str) -> dict:
+async def submit_and_query(file_bytes: bytes, filename: str) -> dict:
     if MOCK_MODE:
         await asyncio.sleep(2)
+        import random
         score = round(random.uniform(0.0, 1.0), 3)
         return {
             "status": "done",
             "result": score,
-            "label": "ai generated" if score>= 0.5 else "human"
+            "label": "ai_generated" if score >= 0.5 else "human"
         }
-    import httpx
-    async with httpx.AsyncClient() as client:
-        response = await client.post(
-            "https://detect-video.truthscan.com/query",
-            json={"id": job_id}
+
+    object_key = upload_video(file_bytes, filename)
+
+    try:
+        presigned_url = s3.generate_presigned_url(
+            'get_object',
+            Params={'Bucket': R2_BUCKET_NAME, 'Key': object_key},
+            ExpiresIn=300
         )
-        response.raise_for_status()
-        data = response.json()
+
+        async with httpx.AsyncClient(timeout=60) as client:
+            response = await client.post(
+                "https://api.sightengine.com/1.0/video/check-sync.json",
+                data={
+                    "stream_url": presigned_url,
+                    "models": "genai",
+                    "api_user": SIGHTENGINE_API_USER,
+                    "api_secret": SIGHTENGINE_API_SECRET,
+                }
+            )
+            response.raise_for_status()
+            data = response.json()
+
+        # Calcula média dos scores por frame
+        frames = data.get("data", {}).get("frames", [])
+        if frames:
+            scores = [f.get("type", {}).get("ai_generated", 0.0) for f in frames]
+            score = sum(scores) / len(scores)
+        else:
+            score = 0.0
+
         return {
-            "status": data["status"],
-            "result": data.get("result", 0),
-            "label": "ai_generated" if data.get("result", 0) >= 0.5 else "human"
+            "status": "done",
+            "result": round(score, 3),
+            "label": "ai_generated" if score >= 0.5 else "human"
         }
+
+    finally:
+        delete_video(object_key)
