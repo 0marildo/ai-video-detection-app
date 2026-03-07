@@ -63,7 +63,7 @@ export default function DashboardPage() {
   function handleLogout() {
     const refresh_token = localStorage.getItem("refresh_token")
     if (refresh_token) {
-      fetch("http://localhost:8000/api/v1/auth/logout", {
+      fetch("ai-video-detection-app-production.up.railway.app", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ refresh_token })
