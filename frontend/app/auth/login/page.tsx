@@ -16,7 +16,7 @@ export default function LoginPage() {
     setError("")
 
     try {
-      const res = await fetch("${process.env.NEXT_PUBLIC_API_URL}/api/v1/auth/login", {
+      const res = await fetch("${process.env.ai-video-detection-app-production.up.railway.app}/api/v1/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password })
