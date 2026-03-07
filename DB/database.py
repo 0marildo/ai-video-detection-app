@@ -2,8 +2,9 @@ import os
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
+from decouple import config
 
-DATABASE_URL = os.environ.get("DATABASE_URL") or ""
+DATABASE_URL = os.environ.get("DATABASE_URL") or config("DATABASE_URL")
 
 # Railway usa postgres:// mas SQLAlchemy precisa de postgresql://
 if DATABASE_URL.startswith("postgres://"):
