@@ -36,7 +36,7 @@ export default function AnalyzePage() {
       const formData = new FormData()
       formData.append("file", file)
 
-      const res = await fetch("http://localhost:8000/api/v1/analyze/upload", {
+      const res = await fetch("ai-video-detection-app-production.up.railway.app", {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
         body: formData
