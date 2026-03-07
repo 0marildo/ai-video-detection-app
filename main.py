@@ -18,6 +18,7 @@ app.add_middleware(
         "http://localhost:3000",
         "http://127.0.0.1:3000",
         "http://localhost:5173",
+        "https://ai-detector-frontend-bk1olq095-0marildos-projects.vercel.app"
     ],
     allow_methods=["*"],
     allow_headers=["*"],

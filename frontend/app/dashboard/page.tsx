@@ -37,10 +37,10 @@ export default function DashboardPage() {
   async function fetchData(token: string) {
     try {
       const [statsRes, analysesRes] = await Promise.all([
-        fetch("https://ai-video-detection-app-production.up.railway.app/api/v1/auth/register", {
+        fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/auth/login`, {
           headers: { Authorization: `Bearer ${token}` }
         }),
-        fetch("https://ai-video-detection-app-production.up.railway.app/api/v1/auth/register", {
+        fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/auth/login`, {
           headers: { Authorization: `Bearer ${token}` }
         })
       ])
@@ -63,7 +63,7 @@ export default function DashboardPage() {
   function handleLogout() {
     const refresh_token = localStorage.getItem("refresh_token")
     if (refresh_token) {
-      fetch("ai-video-detection-app-production.up.railway.app", {
+      fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ refresh_token })
