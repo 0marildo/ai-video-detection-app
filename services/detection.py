@@ -58,7 +58,7 @@ async def submit_and_query(file_bytes: bytes, filename: str) -> dict:
         raise HTTPException(status_code=504, detail="Timeout na análise do vídeo. Tente um arquivo menor.")
     except httpx.HTTPStatusError as e:
         raise HTTPException(status_code=502, detail=f"Erro na API de detecção: {e.response.status_code}")
-    except Exception as e:
+    except Exception:
         raise HTTPException(status_code=500, detail="Erro interno na análise do vídeo.")
     finally:
         delete_video(object_key)

@@ -5,13 +5,10 @@ from DB import models
 from DB.schemas import UserCreate, UserResponse, TokenResponse, AnalysisResponse, RefreshRequest
 from Auth.Authentication import hash_password, create_jwt_token, get_current_user, verify_password
 from services.detection import submit_and_query
-from slowapi import Limiter
-from slowapi.util import get_remote_address
 import uuid, hashlib, secrets
 from datetime import datetime, timedelta, timezone
 
 router = APIRouter(prefix="/api/v1", tags=["Auth"])
-limiter = Limiter(key_func=get_remote_address)
 
 
 @router.get("/analyses", response_model=list[AnalysisResponse])
@@ -43,7 +40,6 @@ async def register(user_data: UserCreate, db: Session = Depends(get_db)):
     return new_user
 
 
-@limiter.limit("10/minute")
 @router.post("/auth/login", response_model=TokenResponse)
 async def login(request: Request, user_data: UserCreate, db: Session = Depends(get_db)):
     user = db.query(models.User).filter(models.User.email == user_data.email).first()
@@ -88,7 +84,6 @@ async def logout(body: RefreshRequest, db: Session = Depends(get_db)):
     return {"message": "Logout realizado com sucesso"}
 
 
-@limiter.limit("5/minute")
 @router.post("/analyze/upload", response_model=AnalysisResponse)
 async def analyze_upload(
     request: Request,
