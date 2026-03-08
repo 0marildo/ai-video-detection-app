@@ -43,8 +43,8 @@ async def register(user_data: UserCreate, db: Session = Depends(get_db)):
     return new_user
 
 
-@router.post("/auth/login", response_model=TokenResponse)
 @limiter.limit("10/minute")
+@router.post("/auth/login", response_model=TokenResponse)
 async def login(request: Request, user_data: UserCreate, db: Session = Depends(get_db)):
     user = db.query(models.User).filter(models.User.email == user_data.email).first()
     if not user or not verify_password(user_data.password, user.password_hash):
@@ -88,8 +88,8 @@ async def logout(body: RefreshRequest, db: Session = Depends(get_db)):
     return {"message": "Logout realizado com sucesso"}
 
 
-@router.post("/analyze/upload", response_model=AnalysisResponse)
 @limiter.limit("5/minute")
+@router.post("/analyze/upload", response_model=AnalysisResponse)
 async def analyze_upload(
     request: Request,
     file: UploadFile = File(...),
@@ -106,8 +106,6 @@ async def analyze_upload(
         raise HTTPException(status_code=400, detail="Arquivo muito pequeno. Mínimo 1KB")
 
     result = await submit_and_query(file_bytes, file.filename)
-    if result["status"] != "done":
-        raise HTTPException(status_code=500, detail="Análise falhou")
 
     analysis = models.Analysis(
         user_id=uuid.UUID(user_id),

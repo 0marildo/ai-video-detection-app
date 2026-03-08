@@ -1,5 +1,6 @@
 import asyncio
 import httpx
+from fastapi import HTTPException
 from decouple import config
 from services.storage import upload_video, delete_video, s3, R2_BUCKET_NAME
 
@@ -40,7 +41,6 @@ async def submit_and_query(file_bytes: bytes, filename: str) -> dict:
             response.raise_for_status()
             data = response.json()
 
-        # Calcula média dos scores por frame
         frames = data.get("data", {}).get("frames", [])
         if frames:
             scores = [f.get("type", {}).get("ai_generated", 0.0) for f in frames]
@@ -54,5 +54,11 @@ async def submit_and_query(file_bytes: bytes, filename: str) -> dict:
             "label": "ai_generated" if score >= 0.5 else "human"
         }
 
+    except httpx.TimeoutException:
+        raise HTTPException(status_code=504, detail="Timeout na análise do vídeo. Tente um arquivo menor.")
+    except httpx.HTTPStatusError as e:
+        raise HTTPException(status_code=502, detail=f"Erro na API de detecção: {e.response.status_code}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Erro interno na análise do vídeo.")
     finally:
         delete_video(object_key)

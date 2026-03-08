@@ -9,7 +9,7 @@ SECRET_KEY = config("SECRET_KEY")
 ALGORITHM = "HS256"
 
 def create_jwt_token(user_id: str):
-    experation = datetime.now(timezone.utc) + timedelta(minutes=15)
+    experation = datetime.now(timezone.utc) + timedelta(minutes=60)
     payload = {"sub": user_id, "exp": experation}
     token = jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
     
