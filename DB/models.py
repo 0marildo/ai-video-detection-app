@@ -20,8 +20,15 @@ class Analysis(Base):
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
     source_type = Column(Enum("url", "upload", name="source_type_enum"), nullable=False)
     source_value = Column(Text, nullable=False)
-    ai_score = Column(Float, nullable=False)
-    result = Column(Enum("ai_generated", "human", "uncertain", name="result_enum"), nullable=False)
+    status = Column(
+        Enum("pending", "done", "failed", name="analysis_status_enum"),
+        nullable=False,
+        default="pending",
+        server_default="pending"
+    )
+    media_id = Column(String(255), nullable=True, unique=True)
+    ai_score = Column(Float, nullable=True)
+    result = Column(Enum("ai_generated", "human", "uncertain", name="result_enum"), nullable=True)
     breakdown = Column(JSONB)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 

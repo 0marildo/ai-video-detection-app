@@ -1,8 +1,16 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
+
+type Analysis = {
+  id: string
+  status: "pending" | "done" | "failed"
+  ai_score: number | null
+  result: "ai_generated" | "human" | "uncertain" | null
+  source_value: string
+}
 
 export default function AnalyzePage() {
   const router = useRouter()
@@ -10,11 +18,10 @@ export default function AnalyzePage() {
   const [dragging, setDragging] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
-  const [result, setResult] = useState<{
-    ai_score: number
-    result: string
-    source_value: string
-  } | null>(null)
+  const [statusMessage, setStatusMessage] = useState("")
+  const [result, setResult] = useState<Analysis | null>(null)
+  const pollingRef = useRef(false)
+  const API = process.env.NEXT_PUBLIC_API_URL || "https://ai-video-detection-app-production.up.railway.app"
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault()
@@ -23,10 +30,49 @@ export default function AnalyzePage() {
     if (dropped) setFile(dropped)
   }, [])
 
+  useEffect(() => {
+    return () => {
+      pollingRef.current = false
+    }
+  }, [])
+
+  const pollStatus = useCallback(async (id: string, token: string) => {
+    pollingRef.current = true
+    setStatusMessage("Analisando vídeo... Isso pode levar alguns segundos.")
+
+    const MAX_ATTEMPTS = 100
+    let attempts = 0
+
+    while (pollingRef.current && attempts < MAX_ATTEMPTS) {
+      try {
+        const res = await fetch(`${API}/api/v1/analyze/status/${id}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+        const data = await res.json()
+        if (!res.ok) {
+          throw new Error(data.detail || "Erro ao buscar status")
+        }
+
+        setResult(data)
+        if (data.status !== "pending") {
+          return data
+        }
+      } catch (err: any) {
+        throw new Error(err?.message || "Erro na verificação de status")
+      }
+
+      attempts += 1
+      await new Promise(resolve => setTimeout(resolve, 3000))
+    }
+
+    throw new Error("Timeout: análise demorou mais de 5 minutos")
+  }, [API])
+
   async function handleAnalyze() {
     if (!file) return
     setLoading(true)
     setError("")
+    setStatusMessage("")
     setResult(null)
 
     const token = localStorage.getItem("access_token")
@@ -36,25 +82,37 @@ export default function AnalyzePage() {
       const formData = new FormData()
       formData.append("file", file)
 
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/analyze/upload`, {
+      const res = await fetch(`${API}/api/v1/analyze/upload`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
         body: formData
       })
 
       const data = await res.json()
-      if (!res.ok) { setError(data.detail || "Erro na análise"); return }
+      if (!res.ok) {
+        setError(data.detail || "Erro na análise")
+        return
+      }
+
       setResult(data)
-    } catch {
-      setError("Erro de conexão com o servidor")
+
+      if (data.status === "pending") {
+        const finalAnalysis = await pollStatus(data.id, token)
+        if (finalAnalysis.status === "failed") {
+          setError("A análise falhou. Tente novamente.")
+          return
+        }
+        setResult(finalAnalysis)
+      }
+    } catch (err: any) {
+      setError(err?.message || "Erro de conexão com o servidor")
     } finally {
       setLoading(false)
+      setStatusMessage("")
     }
   }
 
-  const scorePercent = result ? Math.round(result.ai_score * 100) : 0
-  const isAI = result?.result === "ai_generated"
-
+  const scorePercent = result && result.ai_score != null ? Math.round(result.ai_score * 100) : 0
   const getVerdict = () => {
     if (scorePercent >= 80) return { label: "GERADO POR IA", sub: "Alta confiança de geração artificial", color: "#FF3B3B" }
     if (scorePercent >= 50) return { label: "PROVÁVEL IA", sub: "Sinais significativos detectados", color: "#FF8C00" }
@@ -476,20 +534,27 @@ export default function AnalyzePage() {
                 {error && <div className="error-box">⚠ {error}</div>}
 
                 {loading && (
-                  <div className="loading-state">
-                    <div className="loading-label">
-                      <div className="loading-dot"></div>
-                      Analisando
+                  <>
+                    <div className="loading-state">
+                      <div className="loading-label">
+                        <div className="loading-dot"></div>
+                        Analisando
+                      </div>
+                      <div className="loading-bar-track">
+                        <div className="loading-bar-fill"></div>
+                      </div>
+                      <div className="loading-steps">
+                        <div className="loading-step">▸ ENVIANDO PARA PROCESSAMENTO...</div>
+                        <div className="loading-step">▸ EXTRAINDO FRAMES DO VÍDEO...</div>
+                        <div className="loading-step">▸ EXECUTANDO MODELO DE DETECÇÃO...</div>
+                      </div>
                     </div>
-                    <div className="loading-bar-track">
-                      <div className="loading-bar-fill"></div>
-                    </div>
-                    <div className="loading-steps">
-                      <div className="loading-step">▸ ENVIANDO PARA PROCESSAMENTO...</div>
-                      <div className="loading-step">▸ EXTRAINDO FRAMES DO VÍDEO...</div>
-                      <div className="loading-step">▸ EXECUTANDO MODELO DE DETECÇÃO...</div>
-                    </div>
-                  </div>
+                    {statusMessage && (
+                      <div className="text-center text-yellow-400 text-sm animate-pulse">
+                        {statusMessage}
+                      </div>
+                    )}
+                  </>
                 )}
 
                 <button

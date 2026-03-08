@@ -25,8 +25,10 @@ class AnalysisResponse(BaseModel):
     id: UUID
     source_type: str
     source_value: str
-    ai_score: float
-    result: str
+    ai_score: float | None = None
+    result: str | None = None
+    status: str
+    media_id: str | None = None
     created_at: datetime
 
     class Config:

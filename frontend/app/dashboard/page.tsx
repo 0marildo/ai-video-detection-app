@@ -14,8 +14,9 @@ interface Analysis {
   id: string
   source_type: string
   source_value: string
-  ai_score: number
-  result: string
+  ai_score: number | null
+  result: string | null
+  status: "pending" | "done" | "failed"
   created_at: string
 }
 
@@ -141,16 +142,28 @@ export default function DashboardPage() {
                     </p>
                   </div>
                   <div className="text-right">
-                    <span className={`text-xs font-semibold px-3 py-1 rounded-full ${
-                      a.result === "ai_generated"
-                        ? "bg-red-500/15 text-red-400"
-                        : "bg-green-500/15 text-green-400"
-                    }`}>
-                      {a.result === "ai_generated" ? "IA" : "Humano"}
-                    </span>
-                    <p className="text-xs text-gray-500 mt-1">
-                      {(a.ai_score * 100).toFixed(1)}% IA
-                    </p>
+                    {a.status === "pending" ? (
+                      <span className="text-xs font-semibold px-3 py-1 rounded-full bg-yellow-500/15 text-yellow-400">
+                        Processando...
+                      </span>
+                    ) : a.status === "failed" ? (
+                      <span className="text-xs font-semibold px-3 py-1 rounded-full bg-gray-500/15 text-gray-400">
+                        Falhou
+                      </span>
+                    ) : (
+                      <>
+                        <span className={`text-xs font-semibold px-3 py-1 rounded-full ${
+                          a.result === "ai_generated"
+                            ? "bg-red-500/15 text-red-400"
+                            : "bg-green-500/15 text-green-400"
+                        }`}>
+                          {a.result === "ai_generated" ? "IA" : "Humano"}
+                        </span>
+                        <p className="text-xs text-gray-500 mt-1">
+                          {a.ai_score != null ? (a.ai_score * 100).toFixed(1) + "% IA" : ""}
+                        </p>
+                      </>
+                    )}
                   </div>
                 </div>
               ))}
