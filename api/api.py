@@ -5,17 +5,10 @@ from DB import models
 from DB.schemas import UserCreate, UserResponse, TokenResponse, AnalysisResponse, RefreshRequest
 from Auth.Authentication import hash_password, create_jwt_token, get_current_user, verify_password
 from services.detection import submit_and_query
-from slowapi import Limiter
-from slowapi.util import get_remote_address
-from decouple import config
 import uuid, hashlib, secrets
 from datetime import datetime, timedelta, timezone
 
-MAX_UPLOAD_SIZE_MB = int(config("MAX_UPLOAD_SIZE_MB", default=100))
-MIN_UPLOAD_SIZE_KB = int(config("MIN_UPLOAD_SIZE_KB", default=1))
-
 router = APIRouter(prefix="/api/v1", tags=["Auth"])
-limiter = Limiter(key_func=get_remote_address)
 
 
 @router.get("/analyses", response_model=list[AnalysisResponse])
@@ -61,7 +54,6 @@ async def login(request: Request, user_data: UserCreate, db: Session = Depends(g
         revoked=False
     ))
     db.commit()
-
     return {"access_token": create_jwt_token(str(user.id)), "refresh_token": raw_refresh, "token_type": "bearer"}
 
 
@@ -71,12 +63,10 @@ async def refresh(body: RefreshRequest, db: Session = Depends(get_db)):
         models.RefreshToken.token_hash == hashlib.sha256(body.refresh_token.encode()).hexdigest(),
         models.RefreshToken.revoked == False
     ).first()
-
     if not stored:
         raise HTTPException(status_code=401, detail="Refresh token inválido")
     if stored.expires_at < datetime.now(timezone.utc):
         raise HTTPException(status_code=401, detail="Refresh token expirado")
-
     return {"access_token": create_jwt_token(str(stored.user_id)), "token_type": "bearer"}
 
 
@@ -98,21 +88,18 @@ async def analyze_upload(
     db: Session = Depends(get_db),
     user_id: str = Depends(get_current_user)
 ):
-    if file.content_type not in ["video/mp4", "video/quicktime", "video/avi", "video/mkv", "video/webm"]:
-        raise HTTPException(status_code=400, detail="Formato não suportado")
+    ALLOWED_TYPES = ["video/mp4", "video/quicktime", "video/avi", "video/mkv", "video/webm"]
+    if file.content_type not in ALLOWED_TYPES:
+        raise HTTPException(status_code=400, detail="Formato não suportado. Use MP4, MOV, AVI, MKV ou WebM.")
 
     file_bytes = await file.read()
-    if len(file_bytes) > MAX_UPLOAD_SIZE_MB * 1024 * 1024:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Arquivo muito grande. Máximo {MAX_UPLOAD_SIZE_MB}MB"
-        )
-    if len(file_bytes) < MIN_UPLOAD_SIZE_KB * 1024:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Arquivo muito pequeno. Mínimo {MIN_UPLOAD_SIZE_KB}KB"
-        )
 
+    if len(file_bytes) > 100 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="Arquivo muito grande. Máximo 100MB.")
+    if len(file_bytes) < 1024:
+        raise HTTPException(status_code=400, detail="Arquivo muito pequeno. Mínimo 1KB.")
+
+    # Envia os bytes diretamente para o SightEngine (sem passar pelo R2)
     result = await submit_and_query(file_bytes, file.filename)
 
     analysis = models.Analysis(
