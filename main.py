@@ -18,7 +18,7 @@ app.add_middleware(
         "http://localhost:3000",
         "http://127.0.0.1:3000",
         "http://localhost:5173",
-        "https://ai-video-detection-pcbifqzhq-0marildos-projects.vercel.app",
+        "https://ai-video-detection-omtcu1yae-0marildos-projects.vercel.app",
         "https://ai-video-detection-app.vercel.app"
     ],
     allow_methods=["*"],
