@@ -15,7 +15,7 @@ app = FastAPI(title="AI Video Detector", version="1.0.0")
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-@app.exception_handlers(RequestValidationError)
+@app.exception_handler(RequestValidationError)
 async def validation_exception_hadler(request: Request, exc: RequestValidationError):
     return JSONResponse(
         status_code=422,
