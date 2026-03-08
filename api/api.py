@@ -5,10 +5,17 @@ from DB import models
 from DB.schemas import UserCreate, UserResponse, TokenResponse, AnalysisResponse, RefreshRequest
 from Auth.Authentication import hash_password, create_jwt_token, get_current_user, verify_password
 from services.detection import submit_and_query
+from slowapi import Limiter
+from slowapi.util import get_remote_address
+from decouple import config
 import uuid, hashlib, secrets
 from datetime import datetime, timedelta, timezone
 
+MAX_UPLOAD_SIZE_MB = int(config("MAX_UPLOAD_SIZE_MB", default=100))
+MIN_UPLOAD_SIZE_KB = int(config("MIN_UPLOAD_SIZE_KB", default=1))
+
 router = APIRouter(prefix="/api/v1", tags=["Auth"])
+limiter = Limiter(key_func=get_remote_address)
 
 
 @router.get("/analyses", response_model=list[AnalysisResponse])
@@ -95,10 +102,16 @@ async def analyze_upload(
         raise HTTPException(status_code=400, detail="Formato não suportado")
 
     file_bytes = await file.read()
-    if len(file_bytes) > 100 * 1024 * 1024:
-        raise HTTPException(status_code=400, detail="Arquivo muito grande. Máximo 100MB")
-    if len(file_bytes) < 1024:
-        raise HTTPException(status_code=400, detail="Arquivo muito pequeno. Mínimo 1KB")
+    if len(file_bytes) > MAX_UPLOAD_SIZE_MB * 1024 * 1024:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Arquivo muito grande. Máximo {MAX_UPLOAD_SIZE_MB}MB"
+        )
+    if len(file_bytes) < MIN_UPLOAD_SIZE_KB * 1024:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Arquivo muito pequeno. Mínimo {MIN_UPLOAD_SIZE_KB}KB"
+        )
 
     result = await submit_and_query(file_bytes, file.filename)
 

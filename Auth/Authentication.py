@@ -7,30 +7,30 @@ from datetime import datetime, timedelta, timezone
 
 SECRET_KEY = config("SECRET_KEY")
 ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = int(config("ACCESS_TOKEN_EXPIRE_MINUTES", default=60))
 
-def create_jwt_token(user_id: str):
-    experation = datetime.now(timezone.utc) + timedelta(minutes=60)
-    payload = {"sub": user_id, "exp": experation}
-    token = jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
-    
-    return token
+def create_jwt_token(user_id: str, expires_minutes: int | None = None):
+    expires_minutes = expires_minutes or ACCESS_TOKEN_EXPIRE_MINUTES
+    expiration = datetime.now(timezone.utc) + timedelta(minutes=expires_minutes)
+    payload = {"sub": user_id, "exp": expiration}
+    return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
 
 def decode_jwt_token(token: str):
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         return payload.get("sub")
     except jwt.ExpiredSignatureError:
-        raise HTTPException(status_code=403, detail="Token Experied")
+        raise HTTPException(status_code=403, detail="Token expired")
     except jwt.InvalidTokenError:
         raise HTTPException(status_code=401, detail="Invalid token")
-    
+
 oauth2_scheme = HTTPBearer()
 
 def get_current_user(credentials: HTTPAuthorizationCredentials =Security(oauth2_scheme)):
     token = credentials.credentials
     user_id = decode_jwt_token(token)
     if user_id is None:
-        raise HTTPException(status_code=401, detail="Could not validade credentials")
+        raise HTTPException(status_code=401, detail="Could not validate credentials")
     return user_id
 
 def hash_password(password: str) -> str:

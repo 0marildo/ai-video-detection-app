@@ -37,10 +37,10 @@ export default function DashboardPage() {
   async function fetchData(token: string) {
     try {
       const [statsRes, analysesRes] = await Promise.all([
-        fetch(`${API}/api/v1/auth/login`, {
+        fetch(`${API}/api/v1/dashboard`, {
           headers: { Authorization: `Bearer ${token}` }
         }),
-        fetch(`${API}/api/v1/auth/login`, {
+        fetch(`${API}/api/v1/analyses`, {
           headers: { Authorization: `Bearer ${token}` }
         })
       ])
@@ -63,7 +63,7 @@ export default function DashboardPage() {
   function handleLogout() {
     const refresh_token = localStorage.getItem("refresh_token")
     if (refresh_token) {
-      fetch(`${API}/api/v1/auth/login`, {
+      fetch(`${API}/api/v1/auth/logout`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ refresh_token })
