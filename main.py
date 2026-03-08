@@ -4,6 +4,9 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from api.api import router
+from fastapi.responses import JSONResponse
+from fastapi.exceptions import RequestValidationError
+
 
 limiter = Limiter(key_func=get_remote_address)
 
@@ -11,6 +14,20 @@ app = FastAPI(title="AI Video Detector", version="1.0.0")
 
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+@app.exception_handlers(RequestValidationError)
+async def validation_exception_hadler(request: Request, exc: RequestValidationError):
+    return JSONResponse(
+        status_code=422,
+        content={"detail": "Erro de validação nos dados enviados"}
+    )
+
+@app.exception_handler(Exception)
+async def geral_exception_handler(request: Request, exc: Exception):
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Erro interno do servidor"}
+    )
 
 app.add_middleware(
     CORSMiddleware,
