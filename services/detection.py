@@ -9,7 +9,7 @@ MOCK_MODE = not SIGHTENGINE_API_USER or not SIGHTENGINE_API_SECRET
 
 CALLBACK_URL = config(
     "SIGHTENGINE_CALLBACK_URL",
-    default="https://ai-video-detection-app-production.up.railway.app/api/v1/callback/sightengine",
+    default="http://localhost:8000/api/v1/callback/sightengine",
 )
 
 
