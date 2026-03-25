@@ -3,9 +3,9 @@ from playwright.sync_api import Page, expect
 import os
 
 BASE_URL = "http://localhost:3000"
-EMAIL = "omar@gmail.com"
-PASSWORD = "12345678"
-VIDEO_PATH = r"C:\Users\omari\Downloads\videoplayback (4).mp4"
+EMAIL = os.getenv("TEST_EMAIL", "test@example.com")
+PASSWORD = os.getenv("TEST_PASSWORD", "testpassword123")
+VIDEO_PATH = os.getenv("TEST_VIDEO_PATH", r"C:\Users\omari\Downloads\videoplayback (4).mp4")
 
 
 # ─────────────────────────────────────────
